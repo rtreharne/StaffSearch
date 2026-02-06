@@ -1,0 +1,239 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Dashboard — University of Liverpool</title>
+  <link rel="stylesheet" href="https://www.liverpool.ac.uk/rb/latest/assets/redbrick.css" />
+  <style>
+    .rb-page { background: #f5f6fa; }
+    .rb-stat-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    .rb-header__section .rb-block-container { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 64px; }
+    .rb-header__logo { height: 50px; width: auto; opacity: 0.85; margin-left: 0; }
+    .rb-title-block { display: flex; flex-direction: column; justify-content: center; min-height: 96px; }
+    .rb-title-block .rb-lockup + .rb-lockup { margin-top: -2px; }
+    @media (max-width: 768px) { .rb-stat-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 520px) { .rb-stat-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body class="rb-page">
+  <header class="rb-header">
+    <div class="rb-header__global rb-header__container">
+      <a href="https://www.liverpool.ac.uk/" class="rb-header__global__home">
+        <span class="sr-only">Home</span>
+      </a>
+      <div style="margin-left:auto;"></div>
+    </div>
+    <div class="rb-header__section">
+      <div class="rb-block-container">
+        <img class="rb-header__logo" src="{% static 'uol_logo_reversed.png' %}" alt="University of Liverpool" />
+      </div>
+    </div>
+  </header>
+
+  <section class="rb-block-cover bg-rb--color--blue text-white">
+    <div class="rb-block-container">
+      <div class="rb-title-block">
+        <h2 class="rb-lockup">Staff Search</h2>
+        <p class="rb-lockup text-rb--font-size--xl normal-case">Admin Dashboard.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="rb-block-cover">
+    <div class="rb-block-container">
+      <div class="rb-card">
+        <div class="rb-card__inner">
+          <div class="rb-stat-grid">
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Total URLs</div><div class="rb-lockup">{{ stats.total_urls }}</div></div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Queued URLs</div><div class="rb-lockup">{{ stats.queued_urls }}</div></div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Fetched URLs</div><div class="rb-lockup">{{ stats.fetched_urls }}</div></div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Errors</div><div class="rb-lockup">{{ stats.error_urls }}</div></div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Staff Profiles</div><div class="rb-lockup">{{ stats.staff_count }}</div></div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Chunks</div><div class="rb-lockup">{{ stats.chunk_count }}</div></div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner">
+                <div class="text-rb--color--grey">Crawl req/min ({{ stats.crawl_window_minutes }}m)</div>
+                <div class="rb-lockup">{{ stats.crawl_requests_per_min }}</div>
+              </div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner">
+                <div class="text-rb--color--grey">ETA (Queued / req/min)</div>
+                <div class="rb-lockup">{{ stats.queued_eta_human }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rb-card">
+        <div class="rb-card__inner">
+          <h3 class="rb-card__title">Scheduler</h3>
+          <p>Last fetch: {{ stats.last_fetch|default:"—" }}</p>
+          <p>Next scheduled run: {{ stats.next_run|default:"—" }}</p>
+          <p>Predicted crawl time: {{ stats.predicted_human|default:"—" }}</p>
+          <p>Status: {% if stats.is_paused %}Paused{% elif stats.in_progress %}In progress{% else %}Idle{% endif %}</p>
+          <form method="post" action="/admin-dashboard/run-crawl/">
+            {% csrf_token %}
+            <button class="rb-button rb-button--primary" type="submit">Run Crawl Now</button>
+          </form>
+          {% if stats.is_paused %}
+            <form method="post" action="/admin-dashboard/crawl/resume/" style="margin-top:8px;">
+              {% csrf_token %}
+              <button class="rb-button rb-button--ghost" type="submit">Resume Crawl</button>
+            </form>
+          {% else %}
+            <form method="post" action="/admin-dashboard/crawl/pause/" style="margin-top:8px;">
+              {% csrf_token %}
+              <button class="rb-button rb-button--borderless" type="submit">Stop Crawl</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="rb-card">
+        <div class="rb-card__inner">
+          <h3 class="rb-card__title">Recent Searches</h3>
+          <div class="rb-stat-grid" style="margin-bottom:16px;">
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Last 24h</div><div class="rb-lockup">{{ search_summary.last_24h }}</div></div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Last 7 days</div><div class="rb-lockup">{{ search_summary.last_7d }}</div></div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Last 30 days</div><div class="rb-lockup">{{ search_summary.last_30d }}</div></div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Last year</div><div class="rb-lockup">{{ search_summary.last_365d }}</div></div>
+            </div>
+          </div>
+          {% if recent_searches %}
+            <div style="max-height: 360px; overflow: auto;">
+              <table class="rb-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Query</th>
+                    <th>Filters</th>
+                    <th>Results</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for log in recent_searches %}
+                    <tr>
+                      <td>{{ log.created_at|date:"Y-m-d H:i" }}</td>
+                      <td>{{ log.query|default:"—" }}</td>
+                      <td>
+                        {% if log.filters %}
+                          {{ log.filters }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+                      <td>{{ log.results_count }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-rb--color--grey">No searches logged yet.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="rb-card">
+        <div class="rb-card__inner">
+          <h3 class="rb-card__title">Recent Chats</h3>
+          <div class="rb-stat-grid" style="margin-bottom:16px;">
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Last 24h</div><div class="rb-lockup">{{ chat_summary.last_24h }}</div></div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Last 7 days</div><div class="rb-lockup">{{ chat_summary.last_7d }}</div></div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Last 30 days</div><div class="rb-lockup">{{ chat_summary.last_30d }}</div></div>
+            </div>
+            <div class="rb-card">
+              <div class="rb-card__inner"><div class="text-rb--color--grey">Last year</div><div class="rb-lockup">{{ chat_summary.last_365d }}</div></div>
+            </div>
+          </div>
+          {% if recent_chats %}
+            <table class="rb-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Question</th>
+                  <th>Filters</th>
+                  <th>People</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for log in recent_chats %}
+                  <tr>
+                    <td>{{ log.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ log.question|default:"—" }}</td>
+                    <td>
+                      {% if log.filters %}
+                        {{ log.filters }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if log.response.people %}
+                        {{ log.response.people|length }}
+                      {% else %}
+                        0
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="text-rb--color--grey">No chats logged yet.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="rb-buttongroup">
+        <a class="rb-button rb-button--ghost" href="/">Back to search</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="rb-footer">
+    <div class="rb-footer__global rb-block-container">
+      <nav aria-label="Footer links" class="rb-navigation rb-navigation--footer">
+        <menu class="rb-navigation__list">
+          <li>© University of Liverpool</li>
+          <li><a href="/">Staff Search</a></li>
+          <li>
+            <form method="post" action="/logout/" style="display:inline;">
+              {% csrf_token %}
+              <button class="rb-button rb-button--borderless" type="submit">Logout</button>
+            </form>
+          </li>
+        </menu>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

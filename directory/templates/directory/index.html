@@ -1,0 +1,661 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>University of Liverpool — Staff Search</title>
+  <link rel="stylesheet" href="https://www.liverpool.ac.uk/rb/latest/assets/redbrick.css" />
+  <style>
+    .rb-page { background: #f5f6fa; }
+    .rb-card--tool { border: 1px solid #d7ddea; }
+    .rb-results-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); align-items: stretch; }
+    .rb-results-grid .rb-card { display: flex; }
+    .rb-results-grid .rb-card__inner { display: flex; flex-direction: column; width: 100%; }
+    .rb-card__actions { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .rb-chat { display: grid; gap: 12px; grid-template-columns: 3fr 1fr; }
+    .rb-toolbar { display: flex; align-items: center; gap: 12px; justify-content: space-between; flex-wrap: wrap; }
+    .rb-filter-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); align-items: end; }
+    .rb-filter-grid .rb-input,
+    .rb-filter-grid .rb-select { min-height: 48px; width: 100%; }
+    .rb-search-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    #searchBtn { width: 140px; text-align: center; }
+    .rb-empty { border: 1px dashed #c7cede; padding: 16px; border-radius: 10px; }
+    .rb-header__section .rb-block-container { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 64px; }
+    .rb-header__logo {
+      height: 50px;
+      width: auto;
+      opacity: 0.85;
+      margin-left: 0;
+    }
+    .rb-title-block { display: flex; flex-direction: column; justify-content: center; min-height: 96px; }
+    .rb-title-block .rb-lockup + .rb-lockup { margin-top: -2px; }
+    .rb-card--tool { margin-top: 24px; }
+    #results { margin-top: 24px; }
+    .rb-card__meta { margin: 8px 0 12px; display: grid; gap: 4px; }
+    .rb-card__meta__label { color: #6b7280; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; }
+    .rb-card__meta__value { color: #4b5563; font-size: 0.95rem; }
+    .rb-card__meta__link { color: #1b6ac9; text-decoration: none; }
+    .rb-card__meta__link:hover { text-decoration: underline; }
+    .rb-card__meta__value--secondary { font-size: 0.85rem; color: #6b7280; }
+    .rb-card__relevance { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; min-width: 180px; }
+    .rb-card__relevance__label { color: #6b7280; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    .rb-relevance-bar { background: #e7ebf4; border-radius: 999px; height: 6px; overflow: hidden; }
+    .rb-relevance-bar__fill { height: 100%; background: #1b6ac9; border-radius: 999px; transition: width 0.2s ease; }
+    .rb-card__relevance__value { color: #1f2933; font-weight: 600; font-size: 0.85rem; }
+    .rb-chat-results { display: grid; gap: 12px; margin-top: 12px; }
+    .rb-chat-card .rb-card__title { font-size: 1rem; margin-bottom: 6px; }
+    .rb-chat-card__meta { color: #6b7280; font-size: 0.85rem; }
+    .rb-chat-card__role { margin-top: 6px; color: #1f2933; }
+    .rb-back-to-top {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 1000;
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .rb-back-to-top.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .rb-page--embed .rb-block-cover {
+      padding-top: 16px;
+      padding-bottom: 16px;
+    }
+    .rb-page--embed .rb-card--tool {
+      margin-top: 0;
+    }
+    .rb-page--embed {
+      color: #1f2933;
+      background: #ffffff;
+    }
+    .rb-page--embed .text-white {
+      color: inherit;
+    }
+    #embedCode {
+      color: #1f2933;
+      background: #ffffff;
+    }
+    #profile_url {
+      color: #1f2933;
+      background: #ffffff;
+    }
+    #embedModeSelect {
+      color: #1f2933;
+      background: #ffffff;
+    }
+    @media (max-width: 900px) {
+      .rb-chat { grid-template-columns: 1fr; }
+      .rb-filter-grid { grid-template-columns: 1fr; }
+      .rb-title-block { min-height: 72px; }
+    }
+  </style>
+</head>
+<body class="rb-page{% if is_embed %} rb-page--embed{% endif %}">
+  {% if not is_embed %}
+  <header class="rb-header">
+    <div class="rb-header__global rb-header__container">
+      <a href="https://www.liverpool.ac.uk/" class="rb-header__global__home">
+        <span class="sr-only">Home</span>
+      </a>
+      <div style="margin-left:auto;"></div>
+    </div>
+    <div class="rb-header__section">
+      <div class="rb-block-container">
+        <img class="rb-header__logo" src="{% static 'uol_logo_reversed.png' %}" alt="University of Liverpool" />
+      </div>
+    </div>
+  </header>
+  {% endif %}
+
+  {% if not is_embed %}
+  <section class="rb-block-cover bg-rb--color--blue text-white">
+    <div class="rb-block-container">
+      <div class="rb-title-block">
+        <h2 class="rb-lockup">Staff Search</h2>
+        <p class="rb-lockup text-rb--font-size--xl normal-case">Hybrid semantic + keyword search across staff profiles.</p>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if not is_embed or embed_mode != "chat" %}
+  <section class="rb-block-cover rb-block-cover--pt-0">
+    <div class="rb-block-container">
+      <div class="rb-card rb-card--tool rb-card__content--centered">
+        <div class="rb-card__inner">
+          <div class="rb-formgroup">
+            <div class="rb-filter-grid">
+              <div>
+                <label class="rb-formgroup__label" for="q">Search</label>
+                <input class="rb-input" id="q" placeholder="e.g. marine biology, data science, medieval history" />
+              </div>
+              <div>
+                <label class="rb-formgroup__label" for="faculty">Faculty</label>
+                <select class="rb-select" id="faculty"></select>
+              </div>
+              <div>
+                <label class="rb-formgroup__label" for="institute">Institute</label>
+                <select class="rb-select" id="institute"></select>
+              </div>
+              <div>
+                <label class="rb-formgroup__label" for="department">Department</label>
+                <select class="rb-select" id="department"></select>
+              </div>
+            </div>
+          </div>
+          <div class="rb-toolbar">
+            <div class="rb-search-actions">
+              <button class="rb-button rb-button--primary" id="searchBtn">Search</button>
+              <button class="rb-button rb-button--ghost" id="clearBtn" type="button">Clear</button>
+            </div>
+            <div class="text-rb--color--grey" id="resultCount"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rb-block-cover rb-block-cover--pt-0" id="resultsSection" style="display:none;">
+        <div class="rb-results-grid" id="results"></div>
+        <div class="rb-toolbar" style="margin-top: 16px;">
+          <button class="rb-button rb-button--ghost" id="showMoreBtn" type="button" style="display:none;">Show More</button>
+        </div>
+      </div>
+
+      {% if not is_embed or embed_mode != "search" %}
+      <div class="rb-card rb-card--tool">
+        <div class="rb-card__inner">
+          <label class="rb-formgroup__label" for="question">Ask about staff</label>
+          <div class="rb-chat">
+            <input class="rb-input" id="question" placeholder="e.g. Who works on climate modelling in the Faculty of Science?" />
+            <button class="rb-button rb-button--primary" id="chatBtn">Ask</button>
+          </div>
+          <div class="rb-content-flow" style="margin-top:12px;">
+            <div id="answer"></div>
+            <div class="text-rb--color--grey" id="sources"></div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if is_embed and embed_mode == "chat" %}
+  <section class="rb-block-cover rb-block-cover--pt-0">
+    <div class="rb-block-container">
+      <div class="rb-card rb-card--tool">
+        <div class="rb-card__inner">
+          <label class="rb-formgroup__label" for="question">Ask about staff</label>
+          <div class="rb-chat">
+            <input class="rb-input" id="question" placeholder="e.g. Who works on climate modelling in the Faculty of Science?" />
+            <button class="rb-button rb-button--primary" id="chatBtn">Ask</button>
+          </div>
+          <div class="rb-content-flow" style="margin-top:12px;">
+            <div id="answer"></div>
+            <div class="text-rb--color--grey" id="sources"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if not is_embed %}
+  <footer class="rb-footer">
+    <div class="rb-footer__global rb-block-container" style="margin-top:16px;">
+      <div class="rb-card rb-card--tool" style="max-width: 720px;">
+        <div class="rb-card__inner">
+          <div class="rb-toolbar" style="margin-bottom:12px;">
+            <strong>Embed This Search</strong>
+            <label class="rb-formgroup__label" style="display:flex; align-items:center; gap:8px; margin:0;">
+              <span>Mode</span>
+              <select class="rb-select" id="embedModeSelect" style="min-height: 36px;">
+                <option value="full" selected>Full</option>
+                <option value="search">Search only</option>
+                <option value="chat">Chat only</option>
+              </select>
+            </label>
+          </div>
+          <textarea class="rb-input" id="embedCode" rows="3" readonly></textarea>
+          <div class="rb-toolbar" style="margin-top:12px;">
+            <button class="rb-button rb-button--ghost" id="copyEmbedBtn" type="button">Copy iframe code</button>
+            <span class="text-rb--color--grey" id="embedCopyStatus"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="rb-footer__global rb-block-container" style="margin-top:16px;">
+      <div class="rb-card rb-card--tool" style="max-width: 720px;">
+        <div class="rb-card__inner">
+          <strong>Add Staff Profile</strong>
+          <form method="post" action="/admin-dashboard/profile/add/" style="margin-top:12px;">
+            {% csrf_token %}
+            <div class="rb-formgroup">
+              <label class="rb-formgroup__label" for="profile_url">Profile URL</label>
+              <input class="rb-input" id="profile_url" name="profile_url" placeholder="https://www.liverpool.ac.uk/people/..." />
+              <input type="hidden" name="next" value="{{ request.path }}" />
+            </div>
+            <div class="rb-toolbar" style="margin-top:12px;">
+              <button class="rb-button rb-button--primary" type="submit">Add profile</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="rb-footer__global rb-block-container" style="margin-top:16px;">
+      <nav aria-label="Footer links" class="rb-navigation rb-navigation--footer">
+        <menu class="rb-navigation__list">
+          <li>© University of Liverpool</li>
+        </menu>
+      </nav>
+    </div>
+  </footer>
+  {% endif %}
+
+  <button class="rb-button rb-button--primary rb-back-to-top" id="backToTopBtn" type="button">Back to top</button>
+
+  <script>
+    const qs = (id) => document.getElementById(id);
+
+    function escapeHtml(text) {
+      return (text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatInline(text) {
+      const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+      let result = '';
+      let lastIndex = 0;
+      let match;
+      while ((match = linkRegex.exec(text || '')) !== null) {
+        result += escapeHtml(text.slice(lastIndex, match.index));
+        const label = escapeHtml(match[1]);
+        const href = escapeHtml(match[2]);
+        result += `<a class="rb-link" href="${href}" target="_blank" rel="noreferrer">${label}</a>`;
+        lastIndex = match.index + match[0].length;
+      }
+      result += escapeHtml((text || '').slice(lastIndex));
+      return result.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    }
+
+    function renderMarkdown(markdown) {
+      const lines = (markdown || '').split('\n');
+      let html = '';
+      let inUl = false;
+      let inOl = false;
+
+      const closeLists = () => {
+        if (inUl) {
+          html += '</ul>';
+          inUl = false;
+        }
+        if (inOl) {
+          html += '</ol>';
+          inOl = false;
+        }
+      };
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) {
+          closeLists();
+          continue;
+        }
+
+        const ulMatch = line.match(/^[-*]\s+(.*)$/);
+        if (ulMatch) {
+          if (!inUl) {
+            closeLists();
+            html += '<ul>';
+            inUl = true;
+          }
+          html += `<li>${formatInline(ulMatch[1])}</li>`;
+          continue;
+        }
+
+        const olMatch = line.match(/^(\d+)\.\s+(.*)$/);
+        if (olMatch) {
+          if (!inOl) {
+            closeLists();
+            html += '<ol>';
+            inOl = true;
+          }
+          html += `<li>${formatInline(olMatch[2])}</li>`;
+          continue;
+        }
+
+        closeLists();
+        html += `<p>${formatInline(line)}</p>`;
+      }
+
+      closeLists();
+      return html || '';
+    }
+
+    function renderChatAnswer(payload) {
+      if (!payload) return '';
+      const summary = payload.summary ? `<p>${escapeHtml(payload.summary)}</p>` : '';
+      const people = Array.isArray(payload.people) ? payload.people : [];
+      if (!people.length) {
+        return summary;
+      }
+      if (summary && people.length === 1) {
+        const name = (people[0].name || '').toLowerCase().trim();
+        const rawSummary = (payload.summary || '').toLowerCase();
+        if (name && rawSummary.includes(name)) {
+          return summary;
+        }
+      }
+      const cards = people.map((p) => {
+        const name = escapeHtml(p.name || '');
+        return `
+          <div class="rb-card rb-chat-card">
+            <div class="rb-card__inner">
+              <div class="rb-card__title"><strong>${name}</strong></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      return `${summary}<div class="rb-chat-results">${cards}</div>`;
+    }
+
+    async function loadFilters() {
+      const faculty = qs('faculty').value;
+      const institute = qs('institute').value;
+      const params = new URLSearchParams({ faculty, institute });
+      const res = await fetch(`/api/filters/?${params.toString()}`);
+      const data = await res.json();
+      const fill = (id, items) => {
+        const sel = qs(id);
+        const current = sel.value;
+        sel.innerHTML = '<option value="">All</option>' + items.map(v => `<option value="${v}">${v}</option>`).join('');
+        if (items.includes(current)) {
+          sel.value = current;
+        } else {
+          sel.value = '';
+        }
+      };
+      fill('faculty', data.faculties || []);
+      fill('institute', data.institutes || []);
+      fill('department', data.departments || []);
+    }
+
+    function appendResults(batch) {
+      const results = qs('results');
+      const resultCount = qs('resultCount');
+      const resultsSection = qs('resultsSection');
+      let renderedInBatch = 0;
+      const scores = batch.map(r => (typeof r.score === 'number' ? r.score : 0));
+      const maxScore = scores.length ? Math.max(...scores) : 0;
+      const minScore = scores.length ? Math.min(...scores) : 0;
+
+      batch.forEach(r => {
+        const score = typeof r.score === 'number' ? r.score : 0;
+        const range = maxScore - minScore;
+        const relative = range > 0 ? (score - minScore) / range : (maxScore > 0 ? 1 : 0);
+        const relevancePct = Math.round(relative * 100);
+        if (relevancePct < 25) {
+          return;
+        }
+        const deptValue = r.department || '';
+        const deptHtml = deptValue
+          ? `<a href=\"#\" class=\"rb-card__meta__value rb-card__meta__value--dept rb-card__meta__link\" data-department=\"${escapeHtml(deptValue)}\">${deptValue}</a>`
+          : '';
+        const instituteHtml = r.institute
+          ? `<span class=\"rb-card__meta__value rb-card__meta__value--secondary\">${r.institute}</span>`
+          : '';
+        const facultyHtml = r.faculty
+          ? `<span class=\"rb-card__meta__value rb-card__meta__value--secondary\">${r.faculty}</span>`
+          : '';
+        const card = document.createElement('div');
+        card.className = 'rb-card';
+        card.innerHTML = `
+          <div class="rb-card__inner">
+            <h3 class="rb-card__title">${r.title ? r.title + ' ' : ''}${r.name}</h3>
+            <div class="rb-card__meta">
+              ${deptHtml}
+              ${instituteHtml}
+              ${facultyHtml}
+            </div>
+            <div class="rb-card__actions">
+              <div class="rb-card__relevance" aria-label="Relevance ${relevancePct}%">
+                <span class="rb-card__relevance__label">Relevance</span>
+                <div class="rb-relevance-bar" role="presentation">
+                  <div class="rb-relevance-bar__fill" style="width: ${relevancePct}%;"></div>
+                </div>
+                <span class="rb-card__relevance__value">${relevancePct}%</span>
+              </div>
+              <a class="rb-button rb-button--ghost rb-button--icon" href="${r.profile_url}" target="_blank" rel="noreferrer" data-icon="chevron_right">Profile</a>
+            </div>
+          </div>
+        `;
+        results.appendChild(card);
+        renderedInBatch += 1;
+      });
+
+      const totalShown = results.children.length;
+      resultCount.textContent = totalShown ? `${totalShown} result${totalShown === 1 ? '' : 's'}` : '';
+      if (resultsSection) {
+        resultsSection.style.display = totalShown ? 'block' : 'none';
+      }
+      return renderedInBatch;
+    }
+
+    async function doSearch() {
+      const q = qs('q').value.trim();
+      const faculty = qs('faculty').value;
+      const institute = qs('institute').value;
+      const department = qs('department').value;
+
+      const searchBtn = qs('searchBtn');
+      const prevLabel = searchBtn.textContent;
+      searchBtn.textContent = 'Searching';
+      searchBtn.disabled = true;
+      let dotCount = 0;
+      const dotTimer = setInterval(() => {
+        dotCount = (dotCount + 1) % 4;
+        searchBtn.textContent = `Searching${'.'.repeat(dotCount)}`;
+      }, 400);
+
+      currentOffset = 0;
+      lastQuery = { q, faculty, institute, department };
+      qs('results').innerHTML = '';
+      qs('resultCount').textContent = '';
+      const resultsSection = qs('resultsSection');
+      if (resultsSection) resultsSection.style.display = 'none';
+      qs('showMoreBtn').style.display = 'none';
+      try {
+        await fetchAndRenderResults();
+      } finally {
+        clearInterval(dotTimer);
+        searchBtn.textContent = prevLabel;
+        searchBtn.disabled = false;
+      }
+    }
+
+    let currentOffset = 0;
+    let lastQuery = { q: '', faculty: '', institute: '', department: '' };
+
+    async function fetchAndRenderResults() {
+      const limit = 8;
+      const params = new URLSearchParams({ ...lastQuery, offset: currentOffset, limit });
+      const res = await fetch(`/api/search/?${params.toString()}`);
+      const data = await res.json();
+
+      const results = qs('results');
+      const showMoreBtn = qs('showMoreBtn');
+      const batch = data.results || [];
+      const renderedInBatch = appendResults(batch);
+
+      if (batch.length === limit && renderedInBatch > 0 && results.children.length > 8) {
+        showMoreBtn.style.display = 'inline-flex';
+      } else {
+        showMoreBtn.style.display = 'none';
+      }
+
+      currentOffset += batch.length;
+    }
+
+    function clearFilters() {
+      qs('q').value = '';
+      qs('faculty').value = '';
+      qs('institute').value = '';
+      qs('department').value = '';
+      qs('results').innerHTML = '';
+      qs('answer').textContent = '';
+      qs('sources').textContent = '';
+      qs('resultCount').textContent = '';
+      const resultsSection = qs('resultsSection');
+      if (resultsSection) resultsSection.style.display = 'none';
+      qs('showMoreBtn').style.display = 'none';
+      currentOffset = 0;
+    }
+
+    async function doChat() {
+      const question = qs('question').value.trim();
+      if (!question) return;
+
+      const chatBtn = qs('chatBtn');
+      const prevLabel = chatBtn.textContent;
+      chatBtn.textContent = 'Asking';
+      chatBtn.disabled = true;
+      let dotCount = 0;
+      const dotTimer = setInterval(() => {
+        dotCount = (dotCount + 1) % 4;
+        chatBtn.textContent = `Asking${'.'.repeat(dotCount)}`;
+      }, 400);
+
+      const filters = {
+        faculty: qs('faculty').value,
+        institute: qs('institute').value,
+        department: qs('department').value,
+      };
+
+      try {
+        const res = await fetch('/api/chat/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question, filters })
+        });
+
+        const data = await res.json();
+        qs('answer').innerHTML = renderChatAnswer(data);
+        if (data.sources && data.sources.length) {
+          const links = data.sources.map(s => `<a class="rb-link" href="${s.profile_url}" target="_blank" rel="noreferrer">${s.name}</a>`).join(' · ');
+          qs('sources').innerHTML = `Sources: ${links}`;
+        } else {
+          qs('sources').textContent = '';
+        }
+      } finally {
+        clearInterval(dotTimer);
+        chatBtn.textContent = prevLabel;
+        chatBtn.disabled = false;
+      }
+    }
+
+    async function loadDepartmentStaff(department) {
+      if (!department) return;
+      qs('showMoreBtn').style.display = 'none';
+      qs('results').innerHTML = '';
+      qs('resultCount').textContent = '';
+      const resultsSection = qs('resultsSection');
+      if (resultsSection) resultsSection.style.display = 'none';
+      const params = new URLSearchParams({ department });
+      const res = await fetch(`/api/department/?${params.toString()}`);
+      const data = await res.json();
+      appendResults(data.results || []);
+    }
+
+    const searchBtn = qs('searchBtn');
+    const clearBtn = qs('clearBtn');
+    const chatBtnEl = qs('chatBtn');
+    const showMoreBtn = qs('showMoreBtn');
+    const resultsEl = qs('results');
+
+    if (searchBtn) searchBtn.addEventListener('click', doSearch);
+    if (clearBtn) clearBtn.addEventListener('click', clearFilters);
+    if (chatBtnEl) chatBtnEl.addEventListener('click', doChat);
+    if (showMoreBtn) showMoreBtn.addEventListener('click', () => fetchAndRenderResults());
+    if (resultsEl) {
+      resultsEl.addEventListener('click', (e) => {
+        const target = e.target.closest('.rb-card__meta__link');
+        if (!target) return;
+        e.preventDefault();
+        loadDepartmentStaff(target.dataset.department || '');
+      });
+    }
+    const backToTopBtn = qs('backToTopBtn');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > window.innerHeight) {
+        backToTopBtn.classList.add('is-visible');
+      } else {
+        backToTopBtn.classList.remove('is-visible');
+      }
+    });
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    const embedModeSelect = qs('embedModeSelect');
+    const embedCode = qs('embedCode');
+    const copyEmbedBtn = qs('copyEmbedBtn');
+    const embedCopyStatus = qs('embedCopyStatus');
+    function updateEmbedCode() {
+      if (!embedCode) return;
+      const base = `${window.location.origin}/embed/`;
+      const mode = embedModeSelect ? embedModeSelect.value : 'full';
+      const modeParam = mode && mode !== 'full' ? `?mode=${encodeURIComponent(mode)}` : '';
+      embedCode.value = `<iframe src="${base}${modeParam}" width="100%" height="900" style="border:0;" loading="lazy" title="Staff Search"></iframe>`;
+    }
+    if (embedModeSelect && embedCode) {
+      updateEmbedCode();
+      embedModeSelect.addEventListener('change', updateEmbedCode);
+    }
+    if (copyEmbedBtn && embedCode) {
+      copyEmbedBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(embedCode.value);
+          if (embedCopyStatus) embedCopyStatus.textContent = 'Copied.';
+        } catch (err) {
+          embedCode.select();
+          document.execCommand('copy');
+          if (embedCopyStatus) embedCopyStatus.textContent = 'Copied.';
+        }
+        setTimeout(() => {
+          if (embedCopyStatus) embedCopyStatus.textContent = '';
+        }, 1500);
+      });
+    }
+    const facultyEl = qs('faculty');
+    const instituteEl = qs('institute');
+    const queryEl = qs('q');
+    const questionEl = qs('question');
+
+    if (facultyEl) facultyEl.addEventListener('change', loadFilters);
+    if (instituteEl) instituteEl.addEventListener('change', loadFilters);
+    if (queryEl) queryEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
+    if (questionEl) {
+      questionEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          doChat();
+        }
+      });
+    }
+
+    if (facultyEl && instituteEl) {
+      loadFilters();
+    }
+    if (queryEl) {
+      clearFilters();
+    }
+  </script>
+</body>
+</html>
