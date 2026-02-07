@@ -92,6 +92,22 @@
       .rb-chat { grid-template-columns: 1fr; }
       .rb-filter-grid { grid-template-columns: 1fr; }
       .rb-title-block { min-height: 72px; }
+      .rb-back-to-top {
+        position: fixed;
+        left: 50%;
+        right: auto;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        min-height: 40px;
+        line-height: 1.1;
+        width: auto;
+        text-align: center;
+        transform: translate(-50%, 8px);
+      }
+      .rb-back-to-top.is-visible {
+        transform: translate(-50%, 0);
+      }
     }
   </style>
 </head>
@@ -132,7 +148,7 @@
             <div class="rb-filter-grid">
               <div>
                 <label class="rb-formgroup__label" for="q">Search</label>
-                <input class="rb-input" id="q" placeholder="e.g. marine biology, data science, medieval history" />
+                <input class="rb-input" id="q" type="search" enterkeyhint="go" placeholder="e.g. marine biology, data science, medieval history" />
               </div>
               <div>
                 <label class="rb-formgroup__label" for="faculty">Faculty</label>
@@ -449,7 +465,8 @@
       return renderedInBatch;
     }
 
-    async function doSearch() {
+    async function doSearch(options = {}) {
+      const { scrollToResults = false } = options;
       const q = qs('q').value.trim();
       const faculty = qs('faculty').value;
       const institute = qs('institute').value;
@@ -474,6 +491,10 @@
       qs('showMoreBtn').style.display = 'none';
       try {
         await fetchAndRenderResults();
+        const resultsSection = qs('resultsSection');
+        if (scrollToResults && resultsSection && resultsSection.style.display !== 'none') {
+          resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       } finally {
         clearInterval(dotTimer);
         searchBtn.textContent = prevLabel;
@@ -640,7 +661,15 @@
 
     if (facultyEl) facultyEl.addEventListener('change', loadFilters);
     if (instituteEl) instituteEl.addEventListener('change', loadFilters);
-    if (queryEl) queryEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
+    if (queryEl) {
+      queryEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          queryEl.blur();
+          doSearch({ scrollToResults: true });
+        }
+      });
+    }
     if (questionEl) {
       questionEl.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
