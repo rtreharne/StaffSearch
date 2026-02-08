@@ -22,9 +22,10 @@ class OpenAIClient:
     def chat_with_context(self, question, context_blocks):
         system = (
             "You are a staff directory assistant. Answer only using the provided context. "
-            "Return a single JSON object with keys: summary (string), people (array of objects). "
-            "Each person: name (string), title (string), role (string), profile_url (string). "
-            "If people is non-empty, the summary must not repeat any person's name. "
+            "Return a single JSON object with keys: summary (string), people (array). "
+            "The summary must be short plain text in one brief paragraph. "
+            "Do not use markdown, headings, bullets, numbering, or labels. "
+            "Set people to an empty array in all responses. "
             "If the answer is not in the context, set summary to "
             "\"I cannot find that in the staff profiles.\" and people to an empty array. "
             "Output JSON only."
